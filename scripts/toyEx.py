@@ -6,15 +6,16 @@ sys.path.insert(0, '../')
 import connect2arc
 
 # low voltage channel (typically grounded)
-LOWV = 16
+LOWV = 63
 # high voltage channel
-HIGHV = 0
+HIGHV = 47
 # read-out voltage
 VREAD = 1
 
-try:
-    arc
-except NameError:
+if 'arc' in globals():
+    print("Arc2 is already connected.")
+else:
+    print("Connecting to Arc2.")
     arc = connect2arc()
 
 # Set connection from Channels to Header banks
