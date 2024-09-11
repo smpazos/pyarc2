@@ -6,9 +6,9 @@ sys.path.insert(0, '../')
 import connect2arc
 
 # low voltage channel (typically grounded)
-LOWV = 63
+LOWV = 0
 # high voltage channel
-HIGHV = 47
+HIGHV = 16
 # read-out voltage
 VREAD = 1
 
