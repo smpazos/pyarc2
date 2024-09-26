@@ -2,9 +2,19 @@ from pyarc2 import Instrument, find_ids, ReadAt, ReadAfter, \
     IdleMode, DataMode, ControlMode, AuxDACFn, BiasOrder
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
-sys.path.insert(0, '../')
-import connect2arc
+# import sys
+# sys.path.insert(0, '../')
+# import connect2arc
+# import time
+from datetime import datetime
+import os
+import csv
+
+now = datetime.now()
+onlydate = now.strftime("%Y-%m-%d")
+onlytime = now.strftime("%H%M%S")
+outputs_dir = 'C:\\measurements\\'+onlydate+'\\'+onlytime+'\\arC_outputs\\'
+os.makedirs(outputs_dir, exist_ok=True)
 
 if 'arc' in globals():
     print("Arc2 is already connected.")
@@ -53,9 +63,13 @@ TSMC18_G6 = 21
 TSMC18_G7 = 22
 TSMC18_G8 = 23
 
-TSMC18_D1 = 34
+TSMC18_D5 = 34
+TSMC18_D7 = 36
+TSMC18_D8 = 38
 
-TSMC18_S1 = 50
+TSMC18_S5 = 50
+TSMC18_S7 = 52
+TSMC18_S8 = 57
 
 TSMC18_B = 14
 
@@ -84,95 +98,24 @@ print('I = %g A' % current)
 resistance = -VREAD/current
 print('R10k = %g Ohm\n\n' % resistance)
 
-# Read a single element
-# syntax: current = arc.read_one(LOWV, HIGHV, VREAD)
-# current = arc.read_one(R100K_L, R100K_H, VREAD)
-# print('I = %g A' % current)
-# resistance = -VREAD/current
-# print('R100k = %g Ohm\n\n' % resistance)
-
-# data = arc.read_all(VREAD, BiasOrder.Rows)
-#print(data)
-all_gates = [TSMC18_G1, TSMC18_G2, TSMC18_G3, TSMC18_G4, TSMC18_G5, TSMC18_G6, TSMC18_G7, TSMC18_G8, TSMC18_B]
-arc.connect_to_gnd(all_gates).execute()
-# Array of tuples [(channel, voltage), ...] with voltage conf.
-# These could easily be the gates of transistors in the array controlled via 
-# analog channels in a 64 channel environment of PLCC68D package
-config = [(BS107_G,0)]
-# Configures custom channels to custom voltages, leaving the remainder as they are.
-arc.config_channels(config, None).execute()
-config = [(BS107_S,0)]
-# Configures custom channels to custom voltages, leaving the remainder as they are.
-arc.config_channels(config, None).execute()
-config = [(BS107_D,0.010)]
-# Configures custom channels to custom voltages, leaving the remainder as they are.
-arc.config_channels(config, None).execute()
-
-voltage_read = arc.vread_channels([BS107_G],True)
-print('BS107 gate voltage VG = %g' % voltage_read[0])
-voltage_read = arc.vread_channels([BS107_S],True)
-print('BS107 source voltage VS = %g' % voltage_read[0])
-voltage_read = arc.vread_channels([BS107_D],True)
-print('BS107 source voltage VD = %g\n\n' % voltage_read[0])
-voltages_read = arc.vread_channels(all_channels,True)
-
-Vmax = 3
-Vstep = 0.1
-countmax = int(Vmax/Vstep)
-sweep = [i for i in range(countmax+1)]
-sweep = np.array(sweep)*Vstep
-bwsweep = np.flip(sweep)
-sweep = np.append(sweep,bwsweep[1:])
-
-result = []
-for appV in sweep:
-    config = [(BS107_G,appV)]
-    # Configures custom channels to custom voltages, leaving the remainder as they are.
-    arc.config_channels(config, None).execute()
-    current = arc.read_slice_open([BS107_D],False)
-    # arc.read_slice_open_deferred([BS107_D],False)
-    # print(appV)
-    print('I_BS107 = %g A' % current[BS107_D])
-    result.append(current[BS107_D])
-    # currdata = current(34)
- 
-# for datum in arc.get_iter(DataMode.Bits):
-#     aux = datum[0];
-#     dato = aux[15];
-#     datum
-#     # print('I_BS107 = %g A' % dato)
-#     result.append(dato)
-    
-# Read a single element. It grounds all other channels!
-# syntax: current = arc.read_one(LOWV, HIGHV, VREAD)
-# current = arc.read_one(BS107_S, BS107_D, VREAD)
-
-# resistance = -VREAD/current[BS107_D]
-# print('R_BS107 = %g Ohm\n\n' % resistance)
-
-voltage_read = arc.vread_channels([BS107_G],True)
-print('BS107 gate voltage VG = %g\n\n' % voltage_read[0])
-
 arc.finalise_operation(IdleMode.SoftGnd)
 # arc.execute()
 
-fig = plt.figure()
-ax = fig.add_subplot(111)
-line1, = ax.semilogy(sweep,abs(np.array(result)), 'b-')
-ax.relim() 
-ax.autoscale_view(True,True,True)
-fig.canvas.draw()
-fig.canvas.flush_events()
-
-##################### Ramp ID-VG on TSMC transistor #####################
+##################### Ramp ID-VD on TSMC transistor #####################
  # Array of tuples [(channel, voltage), ...] with voltage conf.
 # These could easily be the gates of transistors in the array controlled via 
 # analog channels in a 64 channel environment of PLCC68D package
+arc.connect_to_gnd(np.array([], dtype=np.uint64)).execute()
 all_gates_butG1 = [TSMC18_G2, TSMC18_G3, TSMC18_G4, TSMC18_G5, TSMC18_G6, TSMC18_G7, TSMC18_G8]
 arc.connect_to_gnd(all_gates_butG1).execute()
-# arc.connect_to_gnd(np.array([], dtype=np.uint64)).execute()
 
-config = [(TSMC18_B,0), (TSMC18_G1,0), (TSMC18_S1,0), (TSMC18_D1,0)]
+
+config = [(TSMC18_B,0), (TSMC18_G1,0.4), (TSMC18_S8,0), (TSMC18_D8,0)]
+# Configures custom channels to custom voltages, leaving the remainder as they are.
+arc.config_channels(config, None).execute()
+config = [(BS107_S,0)]
+arc.config_channels(config, None).execute()
+config = [(BS107_G,1.45)]
 # Configures custom channels to custom voltages, leaving the remainder as they are.
 arc.config_channels(config, None).execute()
 # config = [(TSMC18_G,0)]
@@ -191,14 +134,14 @@ voltage_read = arc.vread_channels([TSMC18_B],True)
 print('TSMC gate voltage VB = %g' % voltage_read[0])
 voltage_read = arc.vread_channels([TSMC18_G1],True)
 print('TSMC gate voltage VG = %g' % voltage_read[0])
-voltage_read = arc.vread_channels([TSMC18_S1],True)
+voltage_read = arc.vread_channels([TSMC18_S8],True)
 print('TSMC source voltage VS = %g' % voltage_read[0])
-voltage_read = arc.vread_channels([TSMC18_D1],True)
+voltage_read = arc.vread_channels([TSMC18_D8],True)
 print('TSMC source voltage VD = %g\n\n' % voltage_read[0])
 voltages_read = arc.vread_channels(all_channels,True)
 
 
-Vmax = 1
+Vmax = 3.5
 Vstep = 0.01
 countmax = int(Vmax/Vstep)
 sweep = [i for i in range(countmax+1)]
@@ -208,42 +151,46 @@ sweep = np.append(sweep,bwsweep[1:])
 
 result = []
 for appV in sweep:
-    config = [(TSMC18_D1,appV)]
+    config = [(TSMC18_D8,appV)]
     # Configures custom channels to custom voltages, leaving the remainder as they are.
     arc.config_channels(config, None).execute()
-    current = arc.read_slice_open([TSMC18_D1],False)
+    current = arc.read_slice_open([TSMC18_D8],False)
     # arc.read_slice_open_deferred([BS107_D],False)
     # print(appV)
-    print('I_TSMC18 = %g A' % current[TSMC18_D1])
-    result.append(current[TSMC18_D1])
+    print('I_TSMC18 = %g A' % current[TSMC18_D8])
+    result.append(current[TSMC18_D8])
     # currdata = current(34)
  
-# for datum in arc.get_iter(DataMode.Bits):
-#     aux = datum[0];
-#     dato = aux[15];
-#     datum
-#     # print('I_BS107 = %g A' % dato)
-#     result.append(dato)
-    
-# Read a single element. It grounds all other channels!
-# syntax: current = arc.read_one(LOWV, HIGHV, VREAD)
-# current = arc.read_one(BS107_S, BS107_D, VREAD)
-
-# resistance = -VREAD/current[BS107_D]
-# print('R_BS107 = %g Ohm\n\n' % resistance)
-
 voltage_read = arc.vread_channels([TSMC18_G1],True)
 print('TSMC G1 gate voltage VG = %g' % voltage_read[0])
+voltage_read = arc.vread_channels([BS107_G],True)
+print('BS107 gate voltage VG = %g' % voltage_read[0])
 
 arc.finalise_operation(IdleMode.SoftGnd)
 # arc.execute()
+current_read = abs(np.array(result))
 
-line2, = ax.semilogy(sweep,abs(np.array(result)), 'r-')
+# fig = plt.figure()
+# ax = fig.add_subplot(111)
+line2, = ax.semilogy(sweep,current_read, 'b-')
 ax.relim() 
 ax.autoscale_view(True,True,True)
 fig.canvas.draw()
 fig.canvas.flush_events()
 
+resultFile = open(outputs_dir+'I-V_VG='+str(TSMC18_G8)+'.csv','w',newline='')
+csv_out = csv.writer(resultFile)
+# print("VD, ID",file = resultFile)
+csv_out.writerow(['VD','ID'])
+aux = zip(sweep,current_read)
+table = np.array(list(aux))
+for row in table:
+        csv_out.writerow(row)
+        # print(row, file = resultFile)
+resultFile.close()
+ 
+# resultFile = open(outputs_dir+'I-V_VG='+str(TSMC18_G8)+'.csv','r')
+# print('I-V curve tracing completed, now plotting...') 
 
 # Comment start
 '''# Comment start
