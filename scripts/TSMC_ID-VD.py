@@ -115,7 +115,7 @@ config = [(TSMC18_B,0), (TSMC18_G1,0.4), (TSMC18_S8,0), (TSMC18_D8,0)]
 arc.config_channels(config, None).execute()
 config = [(BS107_S,0)]
 arc.config_channels(config, None).execute()
-config = [(BS107_G,1.45)]
+config = [(BS107_G,1.55)]
 # Configures custom channels to custom voltages, leaving the remainder as they are.
 arc.config_channels(config, None).execute()
 # config = [(TSMC18_G,0)]
@@ -170,8 +170,8 @@ arc.finalise_operation(IdleMode.SoftGnd)
 # arc.execute()
 current_read = abs(np.array(result))
 
-# fig = plt.figure()
-# ax = fig.add_subplot(111)
+fig = plt.figure()
+ax = fig.add_subplot(111)
 line2, = ax.semilogy(sweep,current_read, 'b-')
 ax.relim() 
 ax.autoscale_view(True,True,True)
