@@ -29,7 +29,7 @@ else:
 
 ############ Defining connection environment for the experiment ############
 # Generalized read-out voltage
-VREAD = 1
+VREAD = 0.1
 all_channels = [i for i in range(64)]
 # Channel definitions
 # R 100K, _H is for PLUST, _L is for MINUS
@@ -62,6 +62,8 @@ TSMC18_G5 = 20
 TSMC18_G6 = 21
 TSMC18_G7 = 22
 TSMC18_G8 = 23
+
+all_sel = [TSMC18_G1, TSMC18_G2, TSMC18_G3, TSMC18_G4, TSMC18_G5, TSMC18_G6, TSMC18_G7, TSMC18_G8]
 
 # Analogue channel nuimbers connected to transistors' D, S, and B
 TSMC18_D5 = 34
@@ -221,6 +223,15 @@ ax.autoscale_view(True,True,True)
 fig.canvas.draw()
 fig.canvas.flush_events()
 
+####### Perform a readAll operation after turning on all the selectors ########
+# Turn ON ALL selector lines [empty list]
+arc.config_selectors(all_sel)
+data = arc.read_all(VREAD, BiasOrder.Rows)
+print(data)
+
+# Turn OFF ALL selector lines [empty list]
+arc.config_selectors([])
+
 # Float all channels before finalizing
 arc.connect_to_gnd([])  # clear grounds
 arc.open_channels(list(range(64))) # set channels to open
@@ -231,7 +242,4 @@ arc.execute()
 
 
 # arc.execute()   
-
-
- 
 '''# Comment end
