@@ -11,3 +11,4 @@ Cargo.lock
 *.dll
 *.lib
 *.bin
+scripts/debug_output_osc.txt

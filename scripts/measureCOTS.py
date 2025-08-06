@@ -12,7 +12,7 @@ else:
     print("Connecting to Arc2.\n\n")
     arc2id = find_ids()[0]
     # firmware; shipped with your board
-    fw = 'efm03_20220905.bin'
+    fw = 'efm03_20240918.bin'
     # connect to the board
     arc = Instrument(arc2id, fw)
     arc.finalise_operation(IdleMode.SoftGnd, None)

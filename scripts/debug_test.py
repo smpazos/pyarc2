@@ -15,7 +15,7 @@ if len(ids) == 0:
     sys.exit("error: no instrument found")
 
 # load firmware
-arc = pyarc2.Instrument(ids[0], 'efm03_20240418.bin')
+arc = pyarc2.Instrument(ids[0], 'efm03_20240918.bin')
 arc.finalise_operation(pyarc2.IdleMode.SoftGnd)
 
 # set the header pins as connected if 32NNA68 is connected
@@ -69,4 +69,4 @@ output_file.write("\n\n")
 
 # end script
 output_file.close()
-quit("script complete")
+#quit("script complete")
