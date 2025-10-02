@@ -22,7 +22,7 @@ else:
     print("Connecting to Arc2.\n\n")
     arc2id = find_ids()[0]
     # firmware; shipped with your board
-    fw = 'efm03_20220905.bin'
+    fw = 'efm03_20240918.bin'
     # connect to the board
     arc = Instrument(arc2id, fw)
     arc.finalise_operation(IdleMode.SoftGnd, None)
@@ -37,7 +37,7 @@ all_channels = [i for i in range(64)]
 # R100K_L = 31
 
 # R 1K, _H is for PLUST, _L is for MINUS
-R1K_H = 47
+R1K_H = 36
 R1K_L = 63
 
 # R 100K, _H is for PLUST, _L is for MINUS
@@ -45,13 +45,13 @@ R1K_L = 63
 # R1K_L = 48
 
 # R 10K, _H is for PLUST, _L is for MINUS
-R10K_H = 0
-R10K_L = 16
+R10K_L = 4
+R10K_H = 59
 
 # BS107 gate, source and drain
-BS107_G = 54
-BS107_D = 32
-BS107_S = 48
+BS107_G_sel = 27     # Connected to selector line 4
+BS107_D = 59        # Connected to analogue ch36 
+BS107_S = 4        # Connected to analogue ch27
 
 # TSMC chip gates, connected to Selector lines 4-27 in 32SLP48DIP board
 TSMC18_G1 = 4   # Selector channel connected to G1 with jumper
@@ -76,6 +76,11 @@ TSMC18_S8 = 57
 
 TSMC18_B = 14
 
+# Selector configuration
+SEL_LOW = 0;
+SEL_HI  = 1.85;
+SEL_MAX = 2.5;
+
 ############ Connection environment definition complete ############♣
 
 
@@ -93,7 +98,7 @@ arc.connect_to_gnd(np.array([], dtype=np.uint64)).execute()
 #                          (AuxDACFn.CREF, 6), (AuxDACFn.CSET, 5), ...
 #                          (AuxDACFn.ARB1, 0), (AuxDACFn.ARB2, 0)])
 # Configure Selector line voltages low and high
-arc.config_aux_channels([(AuxDACFn.SELL, 0), (AuxDACFn.SELH, 0.3)])
+arc.config_aux_channels([(AuxDACFn.SELL, SEL_LOW), (AuxDACFn.SELH, SEL_HI)])
 
 ##################### Ramp ID-VD on TSMC transistor #####################
  # Array of tuples [(channel, voltage), ...] with voltage conf.
@@ -102,12 +107,12 @@ arc.config_aux_channels([(AuxDACFn.SELL, 0), (AuxDACFn.SELH, 0.3)])
 arc.connect_to_gnd(np.array([], dtype=np.uint64)).execute()
 
 
-config = [(TSMC18_B,0), (TSMC18_S8,0), (TSMC18_D8,0)]
+config = [(BS107_S,0), (R10K_L,0)]
 # Configures custom channels to custom voltages, leaving the remainder as they are.
 arc.config_channels(config, None).execute()
 
 # Configure the voltage sweep lists
-Vmax = 3.5
+Vmax = 0.5
 Vstep = 0.01
 countmax = int(Vmax/Vstep)
 sweep = [i for i in range(countmax+1)]
@@ -116,23 +121,23 @@ bwsweep = np.flip(sweep)
 sweep = np.append(sweep,bwsweep[1:])
 
 # Turn on listed selector lines to configured selector HIGH voltage
-arc.config_selectors([TSMC18_G1])
+arc.config_selectors([BS107_G_sel])
 
 # Sweep voltage point-by-point in a ladder fashion and read crrent at each step
 result = []
 for appV in sweep:
-    config = [(TSMC18_D8,appV)]
+    config = [(R10K_H,appV)]
     # Configures custom channels to custom voltages, leaving the remainder as they are.
     arc.config_channels(config, None).execute()
-    current = arc.read_slice_open([TSMC18_D8],False)
-    # arc.read_slice_open_deferred([BS107_D],False)
+    # current = arc.read_slice_open([TSMC18_D8],False)
+    current = arc.read_slice_open([R10K_H],False)
     # print(appV)
-    print('I_TSMC18 = %g A' % current[TSMC18_D8])
-    result.append(current[TSMC18_D8])
+    print('I_BS107 = %g A' % current[R10K_H])
+    result.append(current[R10K_H])
     # currdata = current(34)
 
 # Set all channels back to 0V in case the sweep does not go back to 0V    
-config = [(TSMC18_B,0), (TSMC18_S8,0), (TSMC18_D8,0)]
+config = [(TSMC18_B,0), (TSMC18_S8,0), (BS107_D,0), (R10K_H,0)]
 # Configures custom channels to custom voltages, leaving the remainder as they are.
 arc.config_channels(config, None).execute()
 # Turn OFF ALL selector lines [empty list]
@@ -168,7 +173,8 @@ resultFile.close()
 ##################### Fast Ramp I-V on transistor #####################
 
 # Turn on listed selector lines to configured selector HIGH voltage
-arc.config_selectors([TSMC18_G1])
+arc.config_selectors([BS107_G_sel])
+arc.gnd_add([BS107_S, R10K_L])
 
 # generate the ramp instruction
 # at each step, then read at pulse voltage every 2 pulses (a block)
@@ -176,13 +182,13 @@ arc.config_selectors([TSMC18_G1])
 # See syntax below:
 # generate_ramp(low, high, vstart, vstep, vstop, pw[ns], inter[ns], npulse, \
 #   readat, readafter, /)
-Vmax = 0.4
+Vmax = 0.5
 Vstep = 0.01
 countmax = Vmax/Vstep
-arc.generate_ramp(BS107_S, BS107_D, 0.0, Vstep, Vmax, 1000000, 1000000, 1, \
-    ReadAt.Bias, ReadAfter.Block)
-arc.generate_ramp(BS107_S, BS107_D, Vmax, -Vstep, 0, 1000000, 1000000, 1, \
-    ReadAt.Bias, ReadAfter.Block)
+arc.generate_ramp(BS107_S, BS107_D, 0.0, Vstep, Vmax, 1000000, 10, 1, \
+    ReadAt.Bias, ReadAfter.Pulse)
+arc.generate_ramp(BS107_S, BS107_D, Vmax, -Vstep, 0, 1000000, 10, 1, \
+    ReadAt.Bias , ReadAfter.Pulse)
 arc.execute()
 
 # the ramp is now being applied...
@@ -194,17 +200,19 @@ arc.execute()
 count = 0
 result = []
 voltage = []
-for datum in arc.get_iter(DataMode.Bits):
+print("\n\n###########################\n\n")
+for datum in arc.get_iter(DataMode.All):
     # datum now holds all the wordline currents. However
     # since only channel 0 is selected all other values
     # are NaN
     count = count + 1
+    datum
     aux = datum[0];
-    dato = aux[16];
+    dato = aux[BS107_D];
     print(dato)
     result.append(dato)
     # count = count + 1
-    appV = count*0.01
+    appV = count*Vstep
     if appV > Vmax:
         appV = Vmax-(count-countmax)*Vstep
     voltage.append(appV)
@@ -215,9 +223,10 @@ for datum in arc.get_iter(DataMode.Bits):
 # Turn OFF ALL selector lines [empty list]
 arc.config_selectors([])
    
-fig = plt.figure()
-ax = fig.add_subplot(111)
-line1, = ax.plot(voltage,result, 'r-')
+if 'fig' not in globals():
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+line1, = ax.plot(voltage,abs(np.array(result)), 'r-')
 ax.relim() 
 ax.autoscale_view(True,True,True)
 fig.canvas.draw()
@@ -225,9 +234,9 @@ fig.canvas.flush_events()
 
 ####### Perform a readAll operation after turning on all the selectors ########
 # Turn ON ALL selector lines [empty list]
-arc.config_selectors(all_sel)
-data = arc.read_all(VREAD, BiasOrder.Rows)
-print(data)
+#arc.config_selectors(all_sel)
+#data = arc.read_all(VREAD, BiasOrder.Rows)
+#print(data)
 
 # Turn OFF ALL selector lines [empty list]
 arc.config_selectors([])
