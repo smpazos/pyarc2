@@ -12,3 +12,4 @@ Cargo.lock
 *.lib
 *.bin
 scripts/debug_output_osc.txt
+scripts/debug_output_2025.txt
